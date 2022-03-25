@@ -11,7 +11,7 @@ import SwiftUI
 struct VoiceDelieverAppApp: App {
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            RecordVoiceView()
         }
     }
 }

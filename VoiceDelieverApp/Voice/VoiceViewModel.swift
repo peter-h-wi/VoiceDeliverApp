@@ -15,6 +15,9 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     
     var indexOfPlayer = 0
     let dateFormatter = DateFormatter()
+    
+    let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+    let storageRef = FirebaseManager.shared.storage.reference()
 
     // check if recording has started , we will need it while playing with UI.
     @Published var isRecording : Bool = false
@@ -27,6 +30,10 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     @Published var blinkingCount : Timer?
     @Published var timer : String = "0:00"
     @Published var toggleColor : Bool = false
+    
+    @Published var uploadStatus = "nothing"
+    
+    @Published var count = 0
     
     var playingURL : URL?
     
@@ -50,28 +57,28 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
   
     // Creating the start recording function and doing some formalities , but there are some lines to understand are as follow .
     func startRecording() {
+        // clear all recordings before start recording.
+        deleteAllRecordings()
         
         let recordingSession = AVAudioSession.sharedInstance()
+        
         do {
             try recordingSession.setCategory(.playAndRecord, mode: .default)
             try recordingSession.setActive(true)
         } catch {
             print("Cannot setup the Recording")
         }
+        count += 1
         
-        // The path will contain the directory of the recording.
-        let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         // a unique name to every recording file , so we are giving the name as current date and time . Notice the last words “.m4a” is really important to give . We are using a function call to fetch the current date into string . You can find that function in extension folder in project repository.
-        let fileName = path.appendingPathComponent("CO-Voice : \(dateFormatter.string(from: Date())).m4a")
+        let fileName = path.appendingPathComponent("\(dateFormatter.string(from: Date())).m4a")
 
-        
         let settings = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
             AVSampleRateKey: 12000,
             AVNumberOfChannelsKey: 1,
             AVEncoderAudioQualityKey: AVAudioQuality.high.rawValue
         ]
-        
         
         do {
             audioRecorder = try AVAudioRecorder(url: fileName, settings: settings)
@@ -91,24 +98,68 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
         }
     }
     
+    
     // function to stop the recording and converting that recording variable as false.
     func stopRecording(){
-        
         audioRecorder.stop()
-        
         isRecording = false
-        
         self.countSec = 0
-        
         timerCount!.invalidate()
         blinkingCount!.invalidate()
         
+        uploadRecording()
     }
     
+    func deleteAllRecordings() {
+        let directoryContents = try! FileManager.default.contentsOfDirectory(at: path, includingPropertiesForKeys: nil)
+        for i in directoryContents {
+            self.deleteRecording(url: i)
+        }
+    }
+    
+    func uploadRecording() {
+        // url of files in the path
+        let directoryContents = try! FileManager.default.contentsOfDirectory(at: path, includingPropertiesForKeys: nil)
+        
+        // audioFileRef -> inside child will be the name of the file.
+        let audioFileRef = storageRef.child("\(count)")
+        
+        audioFileRef.putFile(from: directoryContents[0], metadata: nil) { metadata, error in
+            if let error = error {
+                self.uploadStatus = "Failed to upload audio: \(error)"
+                print("Failed to upload audio: \(error)")
+                return
+            }
+            
+            audioFileRef.downloadURL { url, err in
+                if let err = err {
+                    self.uploadStatus = "Failed to retrieve downloadURL: \(err)"
+                    print("Failed to retrieve downloadURL: \(err)")
+                    return
+                }
+                
+                guard let url = url else { return }
+                self.uploadStatus = "\(url)"
+                self.playingURL = url
+            }
+        }
+    }
+    
+    func downloadRecording() {
+        recordingsList.removeAll()
+        for i in 1..<count {
+            let pathRef = storageRef.child("\(i)")
+            pathRef.getData(maxSize: 1*1024*1024) { data, error in
+                if let error = error {
+                } else {
+                    print(i)
+                }
+            }
+        }
+    }
     
     func fetchAllRecording(){
         
-        let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         let directoryContents = try! FileManager.default.contentsOfDirectory(at: path, includingPropertiesForKeys: nil)
         
         // We are traveling in our directory of recordings and appending the recording in our array.
