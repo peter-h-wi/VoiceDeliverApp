@@ -8,14 +8,15 @@
 import Foundation
 import FirebaseFirestoreSwift
 
-struct Message: Identifiable {
+struct Message: Codable, Identifiable {
     @DocumentID var id: String?
     
     let audioURL, groupID, senderID: String
     let timestamp: Date
-    let formatter = RelativeDateTimeFormatter()
     
     var timeAgo: String {
+        let formatter = RelativeDateTimeFormatter()
+
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: timestamp, relativeTo: Date())
     }

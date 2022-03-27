@@ -14,14 +14,19 @@ struct RecordingListView: View {
         NavigationView {
             VStack {
                 ScrollView(showsIndicators: false){
-                    Text("This is URL: \(vm.urlList[0])")
-                    ForEach(vm.recordingsList, id: \.createdAt) { recording in
-                        VoiceCardView(vm: vm, recording: recording)
+                    ForEach(vm.messageList, id: \.id) { message in
+                        VoiceCardView2(vm: vm, message: message)
                     }
+//                    ForEach(vm.recordingsList, id: \.createdAt) { recording in
+//                        VoiceCardView(vm: vm, recording: recording)
+//                    }
                 }
             }
             .padding(.top,30)
             .navigationBarTitle("Recordings")
+        }
+        .onAppear {
+            vm.fetchRecordings()
         }
     }
 }
@@ -31,6 +36,8 @@ struct RecordingListView_Previews: PreviewProvider {
         RecordingListView()
     }
 }
+
+
 
 struct VoiceCardView: View {
     @ObservedObject var vm: VoiceViewModel
@@ -63,6 +70,54 @@ struct VoiceCardView: View {
                         }
                     }) {
                         Image(systemName: recording.isPlaying ? "stop.fill" : "play.fill")
+                            .foregroundColor(.white)
+                            .font(.system(size:30))
+                    }
+                }
+            }
+            .padding()
+        }
+        .padding(.horizontal,10)
+        .frame(width: 370, height: 85)
+        .background(Color(#colorLiteral(red: 0.5568627715, green: 0.3529411852, blue: 0.9686274529, alpha: 1)))
+        .cornerRadius(30)
+        .shadow(color: Color(#colorLiteral(red: 0.8039215803, green: 0.8039215803, blue: 0.8039215803, alpha: 1)).opacity(0.3), radius: 10, x: 0, y: 10)
+    }
+}
+
+struct VoiceCardView2: View {
+    @ObservedObject var vm: VoiceViewModel
+    let message: Message
+    
+    var body: some View {
+        VStack{
+            HStack{
+                Image(systemName:"headphones.circle.fill")
+                    .font(.system(size:50))
+                
+                VStack(alignment:.leading) {
+                    Text("\(message.senderID)")
+                    Text("\(message.groupID)")
+                    Text("\(message.timeAgo)")
+                }
+                VStack {
+                    Button(action: {
+                        // delete Recording.
+                    }) {
+                        Image(systemName:"xmark.circle.fill")
+                            .foregroundColor(.white)
+                            .font(.system(size:15))
+                    }
+                    Spacer()
+                    
+                    Button(action: {
+                        if (vm.isPlaying == true) {
+                            vm.stopPlaying(url: URL(string: message.audioURL)!)
+                        } else {
+                            vm.startPlaying2(url: message.audioURL)
+                        }
+                    }) {
+                        Image(systemName: vm.isPlaying ? "stop.fill" : "play.fill")
                             .foregroundColor(.white)
                             .font(.system(size:30))
                     }

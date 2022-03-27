@@ -19,12 +19,15 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     
     let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     let storageRef = FirebaseManager.shared.storage.reference()
+    
+    var firestoreListener: ListenerRegistration?
 
     // check if recording has started , we will need it while playing with UI.
     @Published var isRecording : Bool = false
     
     // Array to store our URL of recordings and some details, and the type of that array is Recording.
     @Published var recordingsList = [Recording]()
+    @Published var messageList = [Message]()
     @Published var urlList = [String]()
     
     @Published var countSec = 0
@@ -32,6 +35,7 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     @Published var blinkingCount : Timer?
     @Published var timer : String = "0:00"
     @Published var toggleColor : Bool = false
+    @Published var isPlaying : Bool = false
     
     @Published var uploadStatus = "nothing"
         
@@ -39,12 +43,16 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     
     var audioName: String = ""
     
+    var audioPlayer2: AVPlayer?
+    
+    
     // We are initialising and call a function here letter .
     override init() {
         dateFormatter.dateFormat = "dd-MM-YY 'at' HH:mm:ss"
         super.init()
         
         fetchAllRecording()
+        
     }
     
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
@@ -61,10 +69,19 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
         deleteAllRecordings()
         
         let recordingSession = AVAudioSession.sharedInstance()
-        
+       
         do {
             try recordingSession.setCategory(.playAndRecord, mode: .default)
             try recordingSession.setActive(true)
+            recordingSession.requestRecordPermission() { [unowned self] allowed in
+                        DispatchQueue.main.async {
+                            if allowed {
+                                print("allowed")
+                            } else {
+                                print("not allowed")
+                            }
+                        }
+                    }
         } catch {
             print("Cannot setup the Recording")
         }
@@ -165,6 +182,36 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
         }
     }
     
+    func fetchRecordings() {
+        firestoreListener?.remove()
+        messageList.removeAll()
+        
+        firestoreListener = FirebaseManager.shared.firestore
+            .collection("Messages")
+            .document("testGroupID")
+            .collection("Message")
+            .order(by: "timestamp")
+            .addSnapshotListener { querySnapshot, error in
+                if let error = error {
+                    print("Failed to listen for messages: \(error)")
+                    return
+                }
+                
+                // only changes
+                querySnapshot?.documentChanges.forEach({ change in
+                    if change.type == .added {
+                        do {
+                            let data = try change.document.data(as: Message.self)
+                            self.messageList.append(data)
+                            print("Appending message in ChatLogView")
+                        } catch {
+                            print(error)
+                        }
+                    }
+                })
+            }
+    }
+    
     
     func downloadRecording() {
         recordingsList.removeAll()
@@ -181,6 +228,20 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
                     player.play()
                 }
             }
+        }
+    }
+    
+    func startPlaying2(url : String) {
+        let storage = Storage.storage().reference(forURL: url)
+        storage.downloadURL { (url, error) in
+            if let error = error {
+                print("Failed downloading audio: \(error)")
+                return
+            }
+            print("The URL is...: \(url!.absoluteURL)")
+            self.audioPlayer2 = AVPlayer(url: url!.absoluteURL)
+            self.audioPlayer2!.play()
+            print("Played Successfully")
         }
     }
     
