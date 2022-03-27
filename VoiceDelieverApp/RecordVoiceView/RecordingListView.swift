@@ -112,12 +112,12 @@ struct VoiceCardView2: View {
                     
                     Button(action: {
                         if (vm.isPlaying == true) {
-                            vm.stopPlaying(url: URL(string: message.audioURL)!)
+                            vm.stopPlaying2(url: message.audioURL)
                         } else {
                             vm.startPlaying2(url: message.audioURL)
                         }
                     }) {
-                        Image(systemName: vm.isPlaying ? "stop.fill" : "play.fill")
+                        Image(systemName: vm.playingURL2==message.audioURL && vm.isPlaying ? "stop.fill" : "play.fill")
                             .foregroundColor(.white)
                             .font(.system(size:30))
                     }

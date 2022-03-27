@@ -44,7 +44,7 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     var audioName: String = ""
     
     var audioPlayer2: AVPlayer?
-    
+    var playingURL2 : String = ""
     
     // We are initialising and call a function here letter .
     override init() {
@@ -73,7 +73,7 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
         do {
             try recordingSession.setCategory(.playAndRecord, mode: .default)
             try recordingSession.setActive(true)
-            recordingSession.requestRecordPermission() { [unowned self] allowed in
+            recordingSession.requestRecordPermission() { allowed in
                         DispatchQueue.main.async {
                             if allowed {
                                 print("allowed")
@@ -231,7 +231,10 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
         }
     }
     
+    
     func startPlaying2(url : String) {
+        isPlaying = true
+        playingURL2 = url
         let storage = Storage.storage().reference(forURL: url)
         storage.downloadURL { (url, error) in
             if let error = error {
@@ -291,6 +294,12 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
         
         
     }
+    
+    func stopPlaying2(url: String) {
+        isPlaying = false
+        audioPlayer2?.pause()
+    }
+    
     
     // Stop playing will stop all the playing audios , but the reason we are taking the url is to toggle the variable in our list of recordings .
     func stopPlaying(url : URL) {
