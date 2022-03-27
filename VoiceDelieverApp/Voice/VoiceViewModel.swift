@@ -7,6 +7,7 @@
 
 import Foundation
 import AVFoundation
+import Firebase
 
 class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     
@@ -24,6 +25,7 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     
     // Array to store our URL of recordings and some details, and the type of that array is Recording.
     @Published var recordingsList = [Recording]()
+    @Published var urlList = [String]()
     
     @Published var countSec = 0
     @Published var timerCount : Timer?
@@ -32,10 +34,10 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     @Published var toggleColor : Bool = false
     
     @Published var uploadStatus = "nothing"
-    
-    @Published var count = 0
-    
+        
     var playingURL : URL?
+    
+    var audioName: String = ""
     
     // We are initialising and call a function here letter .
     override init() {
@@ -46,7 +48,6 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     }
     
     func audioPlayerDidFinishPlaying(_ player: AVAudioPlayer, successfully flag: Bool) {
-       
         for i in 0..<recordingsList.count {
             if recordingsList[i].fileURL == playingURL {
                 recordingsList[i].isPlaying = false
@@ -54,7 +55,6 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
         }
     }
     
-  
     // Creating the start recording function and doing some formalities , but there are some lines to understand are as follow .
     func startRecording() {
         // clear all recordings before start recording.
@@ -68,10 +68,10 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
         } catch {
             print("Cannot setup the Recording")
         }
-        count += 1
         
         // a unique name to every recording file , so we are giving the name as current date and time . Notice the last words “.m4a” is really important to give . We are using a function call to fetch the current date into string . You can find that function in extension folder in project repository.
-        let fileName = path.appendingPathComponent("\(dateFormatter.string(from: Date())).m4a")
+        audioName = "\(dateFormatter.string(from: Date())).m4a"
+        let fileName = path.appendingPathComponent(audioName)
 
         let settings = [
             AVFormatIDKey: Int(kAudioFormatMPEG4AAC),
@@ -122,8 +122,7 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
         let directoryContents = try! FileManager.default.contentsOfDirectory(at: path, includingPropertiesForKeys: nil)
         
         // audioFileRef -> inside child will be the name of the file.
-        let audioFileRef = storageRef.child("\(count)")
-        
+        let audioFileRef = storageRef.child("audios/\(audioName)")
         audioFileRef.putFile(from: directoryContents[0], metadata: nil) { metadata, error in
             if let error = error {
                 self.uploadStatus = "Failed to upload audio: \(error)"
@@ -141,18 +140,45 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
                 guard let url = url else { return }
                 self.uploadStatus = "\(url)"
                 self.playingURL = url
+                
+                self.sendMessage(of: url)
             }
         }
     }
     
+    func sendMessage(of url: URL) {
+        let document = FirebaseManager.shared.firestore
+            .collection("Messages")
+            .document("testGroupID")
+            .collection("Message")
+            .document()
+        
+        let messageData = ["audioURL": url.description, "groupID": "testGroupID", "senderID": "testSenderID", "timestamp": Timestamp()] as [String: Any]
+        
+        document.setData(messageData) { error in
+            if let error = error {
+                print("Failed to save message into Firestore: \(error)")
+                return
+            }
+            
+            print("Successfully saved current user sending message")
+        }
+    }
+    
+    
     func downloadRecording() {
         recordingsList.removeAll()
-        for i in 1..<count {
-            let pathRef = storageRef.child("\(i)")
-            pathRef.getData(maxSize: 1*1024*1024) { data, error in
+                
+        for url in urlList {
+            let storage = Storage.storage().reference(forURL: "\(url)")
+            
+            storage.downloadURL { (url, error) in
                 if let error = error {
+                    print(error)
+                    return
                 } else {
-                    print(i)
+                    let player = AVPlayer(url: url!)
+                    player.play()
                 }
             }
         }
@@ -259,7 +285,4 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
             return Date()
         }
     }
-    
-    
-    
 }

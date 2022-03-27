@@ -14,6 +14,7 @@ struct RecordingListView: View {
         NavigationView {
             VStack {
                 ScrollView(showsIndicators: false){
+                    Text("This is URL: \(vm.urlList[0])")
                     ForEach(vm.recordingsList, id: \.createdAt) { recording in
                         VoiceCardView(vm: vm, recording: recording)
                     }
