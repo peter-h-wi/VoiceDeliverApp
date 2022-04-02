@@ -15,7 +15,7 @@ final class SocketService: ObservableObject {
     
     private var manager: SocketManager?
     private var socket: SocketIOClient?
-    let hostURL = "http://localhost:8080"
+    private let hostURL = "http://localhost:8080"
     
     init() {
         configureSocketClient()
@@ -53,40 +53,34 @@ final class SocketService: ObservableObject {
             print("socket for handling is invalid")
             return
         }
+        
+        // When Connection is established
         socket.on(clientEvent: .connect) { (data, ack) in
             print("This is finally connected!")
-            socket.emit("NodeJS Server Port", "Hello, Node.js Server!")
-            print("I emit NodeJS Server Port!")
+            // Send: hi message to server
+            socket.emit("Hi Server", "Hello, Node.js Server!")
         }
         
-        socket.on("Send Message To Client") { (data, ack) in
-            print("Client receive message")
-            if let data = data[0] as? [String: String] {
-                DispatchQueue.main.async {
-                    print(data)
-                    print("I received something")
-                }
-                socket.emit("Client Received Message", "Client Received Message")
-                print("I emit Received MEssage Successfully to Server Port!")
-            }
-        }
-        
-        socket.on("chat message") { [weak self] (data, ack) in
-            if let data = data[0] as? String {
-                DispatchQueue.main.async {
-                    self?.messages.append(data)
-                    print("Chat Message work? YES")
-                }
-            }
-        }
-        
-        
-        socket.on("iOS Client Port") { [weak self] (data, ack) in
+        // Received: hi message from server
+        socket.on("Hi Client") { [weak self] (data, ack) in
             if let data = data[0] as? [String: String], let rawMessage = data["msg"] {
                 DispatchQueue.main.async {
                     self?.messages.append(rawMessage)
                     print("iOS Client Port work? YES")
                 }
+            }
+        }
+        
+        // Received: message from server
+        socket.on("Message To Client") { [weak self] (data, ack) in
+            if let data = data[0] as? [String: String], let audioURL = data["audioURL"]{
+                DispatchQueue.main.async {
+                    print("Client receive message:")
+                    print(data)
+                    self?.messages.append(audioURL)
+                }
+                // Reply: message to server
+                socket.emit("Client Received Message", "Client Received Message")
             }
         }
     }
@@ -96,8 +90,8 @@ final class SocketService: ObservableObject {
             print("socket for sending message is invalid")
             return
         }
+        // Send: message to server
         socket.emit("Send Message To Server", message)
-        socket.emit("chat message", "chat message sent")
         print("I sent message to server")
     }
 }
