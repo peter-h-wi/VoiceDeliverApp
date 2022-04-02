@@ -9,6 +9,7 @@ import SwiftUI
 
 struct RecordVoiceView: View {
     @ObservedObject var vm = VoiceViewModel()
+    @ObservedObject var ss = SocketService()
         
     @State private var showingList = false
     @State private var showingAlert = false
@@ -35,6 +36,11 @@ struct RecordVoiceView: View {
                         .sheet(isPresented: $showingList, content: {
                         RecordingListView()
                     })
+                }
+                Text("Received messages from Node.js:")
+                    .font(.largeTitle)
+                ForEach(ss.messages, id: \.self) { msg in
+                    Text(msg).padding()
                 }
                 
                 Spacer()
