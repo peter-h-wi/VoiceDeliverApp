@@ -20,6 +20,8 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
     let storageRef = FirebaseManager.shared.storage.reference()
     
+    let socketService = SocketService.shared
+    
     var firestoreListener: ListenerRegistration?
 
     // check if recording has started , we will need it while playing with UI.
@@ -50,7 +52,6 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     override init() {
         dateFormatter.dateFormat = "dd-MM-YY 'at' HH:mm:ss"
         super.init()
-        
         fetchAllRecording()
         
     }
@@ -164,22 +165,10 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     }
     
     func sendMessage(of url: URL) {
-        let document = FirebaseManager.shared.firestore
-            .collection("Messages")
-            .document("testGroupID")
-            .collection("Message")
-            .document()
         
-        let messageData = ["audioURL": url.description, "groupID": "testGroupID", "senderID": "testSenderID", "timestamp": Timestamp()] as [String: Any]
-        
-        document.setData(messageData) { error in
-            if let error = error {
-                print("Failed to save message into Firestore: \(error)")
-                return
-            }
-            
-            print("Successfully saved current user sending message")
-        }
+        let messageData = ["audioURL": url.description, "groupID": "testGroupID", "senderID": "testSenderID", "timestamp": Date().description] as [String: Any]
+
+        socketService.sendToServer(message: messageData)
     }
     
     func fetchRecordings() {

@@ -11,6 +11,8 @@ import SocketIO
 final class SocketService: ObservableObject {
     @Published var messages = [String]()
     
+    static let shared = SocketService()
+    
     private var manager: SocketManager?
     private var socket: SocketIOClient?
     let hostURL = "http://localhost:8080"
@@ -57,9 +59,29 @@ final class SocketService: ObservableObject {
             print("I emit NodeJS Server Port!")
         }
         
+        socket.on("Send Message To Client") { (data, ack) in
+            print("Client receive message")
+            if let data = data[0] as? [String: String] {
+                DispatchQueue.main.async {
+                    print(data)
+                    print("I received something")
+                }
+                socket.emit("Client Received Message", "Client Received Message")
+                print("I emit Received MEssage Successfully to Server Port!")
+            }
+        }
+        
+        socket.on("chat message") { [weak self] (data, ack) in
+            if let data = data[0] as? String {
+                DispatchQueue.main.async {
+                    self?.messages.append(data)
+                    print("Chat Message work? YES")
+                }
+            }
+        }
+        
         
         socket.on("iOS Client Port") { [weak self] (data, ack) in
-            print("iOS Client Port work?")
             if let data = data[0] as? [String: String], let rawMessage = data["msg"] {
                 DispatchQueue.main.async {
                     self?.messages.append(rawMessage)
@@ -67,5 +89,15 @@ final class SocketService: ObservableObject {
                 }
             }
         }
+    }
+    
+    func sendToServer(message: [String: Any]) {
+        guard let socket = socket else {
+            print("socket for sending message is invalid")
+            return
+        }
+        socket.emit("Send Message To Server", message)
+        socket.emit("chat message", "chat message sent")
+        print("I sent message to server")
     }
 }
