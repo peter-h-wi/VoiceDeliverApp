@@ -9,7 +9,8 @@ import Foundation
 import SocketIO
 
 final class SocketService: ObservableObject {
-    @Published var messages = [String]()
+    @Published var status = [String]()
+    @Published var messages = [Message]()
     
     static let shared = SocketService()
     
@@ -17,7 +18,11 @@ final class SocketService: ObservableObject {
     private var socket: SocketIOClient?
     private let hostURL = "http://localhost:8080"
     
+    let dateFormatter = DateFormatter()
+    
     init() {
+        dateFormatter.dateFormat = "yyyy'-'MM'-'dd' 'HH':'mm':'ssZZZ"
+
         configureSocketClient()
         addHandlers()
         establishConnection()
@@ -65,7 +70,7 @@ final class SocketService: ObservableObject {
         socket.on("Hi Client") { [weak self] (data, ack) in
             if let data = data[0] as? [String: String], let rawMessage = data["msg"] {
                 DispatchQueue.main.async {
-                    self?.messages.append(rawMessage)
+                    self?.status.append(rawMessage)
                     print("iOS Client Port work? YES")
                 }
             }
@@ -73,13 +78,14 @@ final class SocketService: ObservableObject {
         
         // Received: message from server
         socket.on("Message To Client") { [weak self] (data, ack) in
-            if let data = data[0] as? [String: String], let audioURL = data["audioURL"]{
+            if let data = data[0] as? [String: String], let senderID = data["senderID"], let timestamp = data["timestamp"], let groupID = data["groupID"], let audioURL = data["audioURL"] {
                 DispatchQueue.main.async {
-                    print("Client receive message:")
-                    print(data)
-                    self?.messages.append(audioURL)
+                    print("Received Message: \(data)")
+                    let message = Message(audioURL: audioURL, groupID: groupID, senderID: senderID, timestamp: self?.dateFormatter.date(from: timestamp) ?? Date())
+                    self?.messages.append(message)
                 }
                 // Reply: message to server
+                print("Reply to server")
                 socket.emit("Client Received Message", "Client Received Message")
             }
         }
@@ -91,7 +97,7 @@ final class SocketService: ObservableObject {
             return
         }
         // Send: message to server
-        socket.emit("Send Message To Server", message)
+        socket.emit("Message To Server", message)
         print("I sent message to server")
     }
 }

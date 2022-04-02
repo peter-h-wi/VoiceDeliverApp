@@ -9,7 +9,7 @@ import Foundation
 import FirebaseFirestoreSwift
 
 struct Message: Codable, Identifiable {
-    @DocumentID var id: String?
+    let id = UUID()
     
     let audioURL, groupID, senderID: String
     let timestamp: Date

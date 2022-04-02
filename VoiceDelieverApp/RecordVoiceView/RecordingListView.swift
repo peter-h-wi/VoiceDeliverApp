@@ -14,7 +14,7 @@ struct RecordingListView: View {
         NavigationView {
             VStack {
                 ScrollView(showsIndicators: false){
-                    ForEach(vm.messageList, id: \.id) { message in
+                    ForEach(vm.socketService.messages, id: \.id) { message in
                         VoiceCardView2(vm: vm, message: message)
                     }
 //                    ForEach(vm.recordingsList, id: \.createdAt) { recording in

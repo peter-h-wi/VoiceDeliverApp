@@ -38,8 +38,8 @@ struct RecordVoiceView: View {
                 }
                 Text("Received messages from Node.js:")
                     .font(.largeTitle)
-                ForEach(vm.socketService.messages, id: \.self) { msg in
-                    Text(msg).padding()
+                ForEach(vm.socketService.messages, id: \.id) { msg in
+                    Text(msg.audioURL).padding()
                 }
                 
                 Spacer()
