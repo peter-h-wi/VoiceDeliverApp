@@ -8,7 +8,7 @@
 import SwiftUI
 
 struct RecordingListView: View {
-    @ObservedObject var vm = VoiceViewModel()
+    @ObservedObject var vm = VoiceViewModel.shared
         
     var body: some View {
         NavigationView {
@@ -26,7 +26,7 @@ struct RecordingListView: View {
             .navigationBarTitle("Recordings")
         }
         .onAppear {
-            vm.fetchRecordings()
+            // vm.fetchRecordings()
         }
     }
 }
@@ -54,7 +54,7 @@ struct VoiceCardView: View {
                 }
                 VStack {
                     Button(action: {
-                        vm.deleteRecording(url:recording.fileURL)
+                        // vm.deleteRecording(url:recording.fileURL)
                     }) {
                         Image(systemName:"xmark.circle.fill")
                             .foregroundColor(.white)
@@ -64,9 +64,9 @@ struct VoiceCardView: View {
                     
                     Button(action: {
                         if recording.isPlaying == true {
-                            vm.stopPlaying(url: recording.fileURL)
+                            // vm.stopPlaying(url: recording.fileURL)
                         }else{
-                            vm.startPlaying(url: recording.fileURL)
+                            // vm.startPlaying(url: recording.fileURL)
                         }
                     }) {
                         Image(systemName: recording.isPlaying ? "stop.fill" : "play.fill")
@@ -111,11 +111,12 @@ struct VoiceCardView2: View {
                     Spacer()
                     
                     Button(action: {
-                        if (vm.isPlaying == true) {
-                            vm.stopPlaying2(url: message.audioURL)
-                        } else {
-                            vm.startPlaying2(url: message.audioURL)
-                        }
+                        vm.startPlaying2(url: message.audioURL)
+//                        if (vm.isPlaying == true) {
+//                            vm.stopPlaying2(url: message.audioURL)
+//                        } else {
+//                            vm.startPlaying2(url: message.audioURL)
+//                        }
                     }) {
                         Image(systemName: vm.playingURL2==message.audioURL && vm.isPlaying ? "stop.fill" : "play.fill")
                             .foregroundColor(.white)

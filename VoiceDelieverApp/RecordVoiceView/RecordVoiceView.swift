@@ -82,7 +82,7 @@ struct RecordVoiceView: View {
             if vm.isRecording == true {
                 vm.stopRecording()
             }
-            vm.fetchAllRecording()
+            //vm.fetchAllRecording()
             showingList.toggle()
         }) {
             Image(systemName: "list.bullet")

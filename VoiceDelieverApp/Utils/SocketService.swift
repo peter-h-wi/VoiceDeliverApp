@@ -9,6 +9,7 @@ import Foundation
 import SocketIO
 
 final class SocketService: ObservableObject {
+    
     @Published var status = [String]()
     @Published var messages = [Message]()
     
@@ -83,6 +84,7 @@ final class SocketService: ObservableObject {
                     print("Received Message: \(data)")
                     let message = Message(audioURL: audioURL, groupID: groupID, senderID: senderID, timestamp: self?.dateFormatter.date(from: timestamp) ?? Date())
                     self?.messages.append(message)
+                    VoiceViewModel.shared.startPlaying2(url: audioURL)
                 }
                 // Reply: message to server
                 print("Reply to server")

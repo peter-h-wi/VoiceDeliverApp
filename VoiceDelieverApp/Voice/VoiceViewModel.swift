@@ -40,6 +40,8 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     @Published var isPlaying : Bool = false
     
     @Published var uploadStatus = "nothing"
+    
+    static let shared = VoiceViewModel()
         
     var playingURL : URL?
     
@@ -52,7 +54,7 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     override init() {
         dateFormatter.dateFormat = "dd-MM-YY 'at' HH:mm:ss"
         super.init()
-        fetchAllRecording()
+        // fetchAllRecording()
         
     }
     
@@ -67,7 +69,7 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
     // Creating the start recording function and doing some formalities , but there are some lines to understand are as follow .
     func startRecording() {
         // clear all recordings before start recording.
-        deleteAllRecordings()
+        // deleteAllRecordings()
         
         let recordingSession = AVAudioSession.sharedInstance()
        
@@ -127,13 +129,13 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
         
         uploadRecording()
     }
-    
-    func deleteAllRecordings() {
-        let directoryContents = try! FileManager.default.contentsOfDirectory(at: path, includingPropertiesForKeys: nil)
-        for i in directoryContents {
-            self.deleteRecording(url: i)
-        }
-    }
+//
+//    func deleteAllRecordings() {
+//        let directoryContents = try! FileManager.default.contentsOfDirectory(at: path, includingPropertiesForKeys: nil)
+//        for i in directoryContents {
+//            self.deleteRecording(url: i)
+//        }
+//    }
     
     func uploadRecording() {
         // url of files in the path
@@ -171,55 +173,73 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
         socketService.sendToServer(message: messageData)
     }
     
-    func fetchRecordings() {
-        firestoreListener?.remove()
-        messageList.removeAll()
+    func receiveMessage(of message: Message) {
         
-        firestoreListener = FirebaseManager.shared.firestore
-            .collection("Messages")
-            .document("testGroupID")
-            .collection("Message")
-            .order(by: "timestamp")
-            .addSnapshotListener { querySnapshot, error in
-                if let error = error {
-                    print("Failed to listen for messages: \(error)")
-                    return
-                }
-                
-                // only changes
-                querySnapshot?.documentChanges.forEach({ change in
-                    if change.type == .added {
-                        do {
-                            let data = try change.document.data(as: Message.self)
-                            self.messageList.append(data)
-                            print("Appending message in ChatLogView")
-                        } catch {
-                            print(error)
-                        }
-                    }
-                })
-            }
     }
+//
+//    func fetchRecordings() {
+//        firestoreListener?.remove()
+//        messageList.removeAll()
+//
+//        firestoreListener = FirebaseManager.shared.firestore
+//            .collection("Messages")
+//            .document("testGroupID")
+//            .collection("Message")
+//            .order(by: "timestamp")
+//            .addSnapshotListener { querySnapshot, error in
+//                if let error = error {
+//                    print("Failed to listen for messages: \(error)")
+//                    return
+//                }
+//
+//                // only changes
+//                querySnapshot?.documentChanges.forEach({ change in
+//                    if change.type == .added {
+//                        do {
+//                            let data = try change.document.data(as: Message.self)
+//                            self.messageList.append(data)
+//                            print("Appending message in ChatLogView")
+//                        } catch {
+//                            print(error)
+//                        }
+//                    }
+//                })
+//            }
+//    }
     
+//
+//    func downloadRecording() {
+//        recordingsList.removeAll()
+//
+//        for url in urlList {
+//            let storage = Storage.storage().reference(forURL: "\(url)")
+//
+//            storage.downloadURL { (url, error) in
+//                if let error = error {
+//                    print(error)
+//                    return
+//                } else {
+//                    let player = AVPlayer(url: url!)
+//                    player.play()
+//                }
+//            }
+//        }
+//    }
+//
     
-    func downloadRecording() {
-        recordingsList.removeAll()
-                
-        for url in urlList {
-            let storage = Storage.storage().reference(forURL: "\(url)")
-            
-            storage.downloadURL { (url, error) in
-                if let error = error {
-                    print(error)
-                    return
-                } else {
-                    let player = AVPlayer(url: url!)
-                    player.play()
-                }
+    static func startPlaying3(url : String) {
+        let storage = Storage.storage().reference(forURL: url)
+        storage.downloadURL { (url, error) in
+            if let error = error {
+                print("Failed downloading audio: \(error)")
+                return
             }
+            print("The URL is...: \(url!.absoluteURL)")
+            let audioPlayer3 = AVPlayer(url: url!.absoluteURL)
+            audioPlayer3.play()
+            print("Played 3 Successfully")
         }
     }
-    
     
     func startPlaying2(url : String) {
         isPlaying = true
@@ -236,96 +256,94 @@ class VoiceViewModel : NSObject, ObservableObject , AVAudioPlayerDelegate{
             print("Played Successfully")
         }
     }
-    
-    func fetchAllRecording(){
-        
-        let directoryContents = try! FileManager.default.contentsOfDirectory(at: path, includingPropertiesForKeys: nil)
-        
-        // We are traveling in our directory of recordings and appending the recording in our array.
-        for i in directoryContents {
-            recordingsList.append(Recording(fileURL : i, createdAt:getFileDate(for: i), isPlaying: false))
-        }
-        
-        // We are sorting the array as in descending order.
-        recordingsList.sort(by: { $0.createdAt.compare($1.createdAt) == .orderedDescending})
-        
-    }
-    
-    // We are passing the url of recorded file , so that we can play that audio url only.
-    func startPlaying(url : URL) {
-        
-        playingURL = url
-        
-        let playSession = AVAudioSession.sharedInstance()
-        
-        do {
-            try playSession.overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
-        } catch {
-            print("Playing failed in Device")
-        }
-        
-        do {
-            audioPlayer = try AVAudioPlayer(contentsOf: url)
-            audioPlayer.delegate = self
-            audioPlayer.prepareToPlay()
-            audioPlayer.play()
-            
-            // Here we iterating over the list and making the isPlaying variable as true since it is playing now .
-            for i in 0..<recordingsList.count {
-                if recordingsList[i].fileURL == url {
-                    recordingsList[i].isPlaying = true
-                }
-            }
-            
-        } catch {
-            print("Playing Failed")
-        }
-        
-        
-    }
+//
+//    func fetchAllRecording(){
+//
+//        let directoryContents = try! FileManager.default.contentsOfDirectory(at: path, includingPropertiesForKeys: nil)
+//
+//        // We are traveling in our directory of recordings and appending the recording in our array.
+//        for i in directoryContents {
+//            recordingsList.append(Recording(fileURL : i, createdAt:getFileDate(for: i), isPlaying: false))
+//        }
+//
+//        // We are sorting the array as in descending order.
+//        recordingsList.sort(by: { $0.createdAt.compare($1.createdAt) == .orderedDescending})
+//
+//    }
+//
+//    // We are passing the url of recorded file , so that we can play that audio url only.
+//    func startPlaying(url : URL) {
+//
+//        playingURL = url
+//
+//        let playSession = AVAudioSession.sharedInstance()
+//
+//        do {
+//            try playSession.overrideOutputAudioPort(AVAudioSession.PortOverride.speaker)
+//        } catch {
+//            print("Playing failed in Device")
+//        }
+//
+//        do {
+//            audioPlayer = try AVAudioPlayer(contentsOf: url)
+//            audioPlayer.delegate = self
+//            audioPlayer.prepareToPlay()
+//            audioPlayer.play()
+//
+//            // Here we iterating over the list and making the isPlaying variable as true since it is playing now .
+//            for i in 0..<recordingsList.count {
+//                if recordingsList[i].fileURL == url {
+//                    recordingsList[i].isPlaying = true
+//                }
+//            }
+//
+//        } catch {
+//            print("Playing Failed")
+//        }
+//    }
     
     func stopPlaying2(url: String) {
         isPlaying = false
         audioPlayer2?.pause()
     }
     
-    
-    // Stop playing will stop all the playing audios , but the reason we are taking the url is to toggle the variable in our list of recordings .
-    func stopPlaying(url : URL) {
-        
-        audioPlayer.stop()
-        // We are iterating in our list and making that recording file as false .
-        for i in 0..<recordingsList.count {
-            if recordingsList[i].fileURL == url {
-                recordingsList[i].isPlaying = false
-            }
-        }
-    }
-    
-    // To delete the recording from the system , we need their url .
-    func deleteRecording(url : URL) {
-        
-        do {
-            // In this line , we are deleting that recording .
-            try FileManager.default.removeItem(at: url)
-        } catch {
-            print("Can't delete")
-        }
-        
-        // We are iterating over the our recording list and checking if the audio is playing , if playing then stop it the check if it is the recording we want to delete.
-        for i in 0..<recordingsList.count {
-            
-            if recordingsList[i].fileURL == url {
-                if recordingsList[i].isPlaying == true{
-                    stopPlaying(url: recordingsList[i].fileURL)
-                }
-                // Finally we are deleting recording from our recording array .
-                recordingsList.remove(at: i)
-                
-                break
-            }
-        }
-    }
+//
+//    // Stop playing will stop all the playing audios , but the reason we are taking the url is to toggle the variable in our list of recordings .
+//    func stopPlaying(url : URL) {
+//
+//        audioPlayer.stop()
+//        // We are iterating in our list and making that recording file as false .
+//        for i in 0..<recordingsList.count {
+//            if recordingsList[i].fileURL == url {
+//                recordingsList[i].isPlaying = false
+//            }
+//        }
+//    }
+//
+//    // To delete the recording from the system , we need their url .
+//    func deleteRecording(url : URL) {
+//
+//        do {
+//            // In this line , we are deleting that recording .
+//            try FileManager.default.removeItem(at: url)
+//        } catch {
+//            print("Can't delete")
+//        }
+//
+//        // We are iterating over the our recording list and checking if the audio is playing , if playing then stop it the check if it is the recording we want to delete.
+//        for i in 0..<recordingsList.count {
+//
+//            if recordingsList[i].fileURL == url {
+//                if recordingsList[i].isPlaying == true{
+//                    stopPlaying(url: recordingsList[i].fileURL)
+//                }
+//                // Finally we are deleting recording from our recording array .
+//                recordingsList.remove(at: i)
+//
+//                break
+//            }
+//        }
+//    }
     
     func blinkColor() {
         
